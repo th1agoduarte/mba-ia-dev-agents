@@ -1,3 +1,5 @@
 .history/
 .venv/
 .env
+.adk/
+*.pyc
