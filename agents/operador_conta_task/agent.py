@@ -102,7 +102,7 @@ consultor_faturas_subagent = Agent(
         listar_faturas
     ],
     disallow_transfer_to_peers=True,
-    # disallow_transfer_to_parent=True 
+    disallow_transfer_to_parent=True 
     # impedir que o subagente seja transferido para o agente pai
     # obrigar a transferência para root_agent no próximo turno
 )
@@ -120,7 +120,11 @@ consultor_assinaturas_subagent = Agent(
     tools=[
         cancelar_assinatura
     ],
-    disallow_transfer_to_peers=True
+    disallow_transfer_to_peers=True,
+    disallow_transfer_to_parent=True 
+    # manter esta opçao neste subagent ajuda a evitar que o subagente use o `transfer_to_agent` 
+    # para transferir a conversa para outro subagente, o que poderia causar confusão.
+    # o subagente precisa usar `finish_task` para retornar o resultado para o coordenador.
 )
 
 acme_status_subagent = Agent(
