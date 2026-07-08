@@ -1,0 +1,19 @@
+POST http://localhost:8000/sessao
+
+###
+POST http://localhost:8000/mensagem
+Content-Type: application/json
+
+{
+  "mensagem": "liste minhas faturas",
+  "session_id": "2c40c47c-3ffa-4b3f-9a8a-a5eae4c94991"
+}
+
+###
+POST http://localhost:8000/mensagem
+Content-Type: application/json
+
+{
+  "mensagem": "cliente_123",
+  "session_id": "44c2c25f-4412-4f28-b646-bffe832f12a1"
+}

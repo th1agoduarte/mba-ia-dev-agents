@@ -1,0 +1,69 @@
+{
+  "id": "34193655-deb2-4815-b4f5-cb71341af0d0",
+  "appName": "operador_conta_session",
+  "userId": "test_user",
+  "state": {},
+  "events": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "olá"
+          }
+        ],
+        "role": "user"
+      },
+      "invocationId": "e-31fc98fa-4dd9-4d54-8d97-53e4c115f8a3",
+      "author": "user",
+      "actions": {
+        "stateDelta": {},
+        "artifactDelta": {},
+        "requestedAuthConfigs": {},
+        "requestedToolConfirmations": {}
+      },
+      "nodeInfo": {
+        "path": ""
+      },
+      "id": "f281ce18-3402-4508-a89d-4c3c945e4c10",
+      "timestamp": 1783278193.3829215
+    },
+    {
+      "modelVersion": "gemini-3.1-flash-lite",
+      "content": {
+        "parts": [
+          {
+            "text": "Olá! Sou o atendente de conta da Acme. Como posso ajudar você hoje com suas faturas ou assinaturas?",
+            "thoughtSignature": "EjQKMgERTTIPb6yv9j0Qa0juftxBGRVnjzG9vx7YwCljtXqaJ8ci1yxfs848WKVhaDuRUfyK"
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "usageMetadata": {
+        "candidatesTokenCount": 24,
+        "promptTokenCount": 541,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 541
+          }
+        ],
+        "totalTokenCount": 565
+      },
+      "invocationId": "e-31fc98fa-4dd9-4d54-8d97-53e4c115f8a3",
+      "author": "operador_conta",
+      "actions": {
+        "stateDelta": {},
+        "artifactDelta": {},
+        "requestedAuthConfigs": {},
+        "requestedToolConfirmations": {}
+      },
+      "nodeInfo": {
+        "path": "operador_conta@1"
+      },
+      "id": "5586f96e-92bb-40bd-b497-1e2bab47433f",
+      "timestamp": 1783278193.398464
+    }
+  ],
+  "lastUpdateTime": 1783278193.398464
+}
