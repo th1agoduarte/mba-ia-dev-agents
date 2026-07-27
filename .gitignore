@@ -3,3 +3,5 @@
 .env
 .adk/
 *.pyc
+
+agents/tickets.db
