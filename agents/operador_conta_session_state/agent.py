@@ -136,7 +136,7 @@ consultor_assinaturas_subagent = Agent(
          - Informar ao cliente sobre sua assinatura: o plano, status e renovação.
         Antes de proceder com um cancelamento de assinatura, se o usuário respondeu a pesquisa de satisfação e tem
         um sentimento negativo, você deve oferecer um desconto de 20% na próxima renovação da assinatura.
-        Reposta da pesquisa: {pesquisa_satisfacao_resultado?}
+        Resposta da pesquisa: {pesquisa_satisfacao_resultado?}
     """,
     mode="task",
     model="gemini-3.5-flash",
