@@ -8,5 +8,6 @@ dependencies = [
     "asyncpg>=0.31.0",
     "google-adk===2.2.0",
     "litellm>=1.88.1",
+    "mcp>=1.28.1",
     "sqlalchemy>=2.0.51",
 ]
