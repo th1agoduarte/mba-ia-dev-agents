@@ -23,6 +23,7 @@ class RefundInvestigatorOutput(BaseModel):
 _INSTRUCTION = """Você é o Investigador de Refund da Acme Cloud. Seu único trabalho
 é JULGAR pela política.
 
+Ticket Message: {ticket_message}
 Customer Id: {customer_id}
 
 # Passo 1 — buscar as faturas

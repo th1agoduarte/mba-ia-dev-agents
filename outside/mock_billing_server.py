@@ -46,9 +46,10 @@ _INVOICES = {
         {"sku": "PLAN-PRO", "amount": 480, "description": "Assinatura Plano Pro"},
         {"sku": "ADJ-MISC", "amount": 30, "description": "Ajuste manual"},
     ],
+    # Duplicidade com valor acima de 50 reais
     ("C-204", "2026-06"): [
         {"sku": "PLAN-PRO", "amount": 480, "description": "Assinatura Plano Pro"},
-        {"sku": "ADJ-MISC", "amount": 80, "description": "Ajuste manual"},
+        {"sku": "PLAN-PRO", "amount": 480, "description": "Assinatura Plano Pro"},
     ],
     # (C-205 não tem fatura → caso de ir para humano.)
 }

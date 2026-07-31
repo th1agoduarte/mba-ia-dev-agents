@@ -2,7 +2,8 @@ from google.adk.workflow import node
 from google.adk import Context, Event
 from pydantic import BaseModel, Field
 from agents.ticket_resolution.agents.attendant.agent import AttendantOutput
-from google.adk.events import EventActions
+from google.adk.events import EventActions, RequestInput
+from agents.ticket_resolution.agents.escalator.agent import EscalatorInput, EscalatorIntent, EscalatorOutput
 from agents.ticket_resolution.agents.refund_investigator.agent import RefundInvestigatorOutput
 from db import repo
 from db.models import TicketCategory, TicketStatus
@@ -150,6 +151,7 @@ async def triage_refund_node(
 
     if node_input.decision != "refund":
         pass
+        # prosseguir com o escalate
 
     month = node_input.month or ""
     item_ids = node_input.item_ids or []
@@ -158,15 +160,32 @@ async def triage_refund_node(
 
     if calc["status"] in ("not_found", "invalid", "block_refund"):
         pass
+        # prosseguir com o escalate
+
+    if calc["amount"] > REFUND_APPROVAL_THRESHOLD:
+        return Event(
+            actions=EventActions(
+                route="escalate",
+                state_delta={
+                    "refund_amount": calc["amount"],
+                    "refund_month": month,
+                    "refund_skus": calc["skus"],
+                }
+            ),
+            output=EscalatorInput(
+                intent=EscalatorIntent.refund_confirmation,
+                summary=(
+                    f"Pedido de refund de S${calc['amount']:.2f} referente à fatura de {month} (linhas: {calc['skus']})."
+                ),
+                severity=_escalation_severity(amount=calc["amount"])
+            )
+        )
 
     auto_refund_request = AutoRefundRequest(
         refund_month=month,
         refund_amount=calc["amount"],
         refund_skus=calc["skus"],
     )
-
-    if calc["amount"] > REFUND_APPROVAL_THRESHOLD:
-        pass
 
     return Event(actions=EventActions(route="auto_refund"), output=auto_refund_request)
 
@@ -183,17 +202,84 @@ async def auto_refund_node(ctx: Context, node_input: AutoRefundRequest):
     await _billing.issue_refund(
         customer_id=ticket.customer_id,
         amount=node_input.refund_amount,
-        reason=f"Refund automático para fatura {node_input.refund_month} (linhas: {node_input.refund_skus})"
+        reason=f"Refund aprovado pelo agente de suporte (ticket {ticket_id})",
     )
 
     ticket.response = (
-        f"Olá! Seu pedido de refund foi processado com sucesso. "
-        f"O valor de ${node_input.refund_amount:.2f} referente à fatura de {node_input.refund_month} "
-        f"foi estornado para o seu método de pagamento. "
-        f"Detalhes das linhas estornadas: {node_input.refund_skus}. "
-        "Agradecemos por entrar em contato e estamos à disposição para qualquer outra dúvida."
+        f"Olá! Seu pedido de reembolso foi aprovado e processado. "
+        f"O valor de ${node_input.refund_amount:.2f} referente à fatura "
+        f"de {node_input.refund_month} (linhas: {node_input.refund_skus}) "
+        f"será creditado em sua conta em até 5 dias úteis."
     )
-    ticket.status = TicketStatus.RESOLVED
 
+    ticket.status = TicketStatus.RESOLVED
     await repo.update_ticket(ticket)
+
+    return Event(message=ticket.response)  # type: ignore
+
+
+@node
+async def triage_escalation_node(node_input: EscalatorOutput):
+    if node_input.status != "failed":
+        if node_input.intent == EscalatorIntent.refund_confirmation:
+            return Event(actions=EventActions(route="refund_await_input"))
+
+
+@node
+async def await_refund_input_node():
+    return RequestInput(
+        message=(
+            "Aprovação humana necessária para o estorno. "
+            "Responda com confirmed=true para aprovar ou confirmed=false para recusar."
+        ),
+        response_schema={
+            "type": "object",
+            "properties": {
+                "confirmed": {"type": "boolean"}
+            },
+        }
+    )
+
+
+@node
+async def refund_with_confirmation(node_input: dict, ctx: Context):
+    ticket_id = ctx.state.get("ticket_id")
+    ticket = await repo.get_ticket(ticket_id)
+
+    if not ticket:
+        # type: ignore
+        return Event(message=f"Ticket {ticket_id} não encontrado.")
+
+    confirmed = node_input.get("confirmed", False)
+
+    if not confirmed:
+        ticket.response = (
+            "Olá! Seu pedido de reembolso foi analisado, mas infelizmente não foi aprovado. "
+            "Se tiver dúvidas ou precisar de mais informações, entre em contato com nosso suporte."
+        )
+        ticket.status = TicketStatus.RESOLVED
+        await repo.update_ticket(ticket)
+        return Event(message=ticket.response)  # type: ignore
+
+    refund_amount = ctx.state.get("refund_amount")
+    refund_month = ctx.state.get("refund_month")
+    refund_skus = ctx.state.get("refund_skus")
+
+    # Se confirmado, processar o reembolso
+    await _billing.issue_refund(
+        customer_id=ticket.customer_id,
+        amount=refund_amount,
+        reason=f"Refund aprovado pelo agente de suporte (ticket {ticket_id})",
+    )
+
+    ticket.response = (
+        f"Olá! Seu pedido de reembolso foi aprovado e processado. "
+        f"O valor de ${refund_amount:.2f} referente à fatura "
+        f"de {refund_month} (linhas: {refund_skus}) "
+        f"será creditado em sua conta em até 5 dias úteis."
+    )
+
+    ticket.status = TicketStatus.RESOLVED
+    await repo.update_ticket(ticket)
+
     return Event(message=ticket.response)  # type: ignore
