@@ -1,3 +1,5 @@
+from typing import Literal
+
 from google.adk import Agent
 from google.adk.tools import AgentTool
 from pydantic import BaseModel, Field
@@ -6,7 +8,16 @@ from agents.ticket_resolution.tools.platform_status_tool import platform_status
 
 
 class AttendantOutput(BaseModel):
-    status: str = Field(description="Status da ação: 'success' | 'error'.")
+    # `Literal` em vez de `str`: o campo vira enum na function declaration e o
+    # modelo não consegue inventar um terceiro valor (ex.: "resolved"), que o
+    # `finish_ticket_node` leria como falha.
+    status: Literal["success", "error"] = Field(
+        description=(
+            "'success' quando você produziu uma resposta útil ao cliente — mesmo "
+            "que a solução dependa de algo em andamento (incidente, prazo). "
+            "'error' apenas quando NÃO foi possível responder."
+        )
+    )
     message: str = Field(description="Mensagem final para o cliente.")
 
 _INSTRUCTION = """Você é o Atendente da central da Acme Cloud — a linha de frente do
@@ -31,7 +42,10 @@ Exemplos de pedido de ação de conta:
 Se o cliente NÃO pede ação de conta, use o restante do seu conhecimento para resolver o problema
 
 FORMATO DE SAÍDA: JSON com os campos `status` e `message`.
-A mensagem deve ser cordial e educado, 
+`status` é EXATAMENTE `success` ou `error`: use `success` sempre que você entregou
+uma resposta útil (inclusive quando o próximo passo é aguardar um incidente em
+andamento) e `error` só quando não conseguiu responder.
+A mensagem deve ser cordial e educado,
 deve dar detalhes do que foi feito, e deve ser clara sobre o próximo passo (se houver).
 """
 

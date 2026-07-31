@@ -1,13 +1,15 @@
 from db import repo
 from db.models import TicketEscalationModel
 
+# As chaves são os valores do `EscalatorIntent` — a tool e o agente falam o MESMO
+# vocabulário, senão o LLM precisa adivinhar a tradução (e às vezes erra).
 _TITLE_PREFIX = {
-    "approval_gate": "[Aprovação humana]",
+    "refund_confirmation": "[Aprovação humana]",
     "handoff": "[Handoff humano]",
 }
 
 _BODY_PROTOCOL = {
-    "approval_gate": (
+    "refund_confirmation": (
         "Para APROVAR a ação solicitada, mova este issue para Done; "
         "para RECUSAR, mova para Canceled."
     ),
@@ -48,7 +50,8 @@ async def create_ticket_escalation(
     Args:
         ticket_id: ID do ticket a ser escalado.
         customer_id: ID do cliente do ticket.
-        intent: Tipo de handoff: `approval_gate` ou `handoff`.
+        intent: Tipo de handoff: `refund_confirmation` ou `handoff` — repasse o
+            mesmo valor que veio no pedido, sem traduzir.
         summary: Resumo do motivo da escalação.
         severity: Severidade da escalação: low | medium | high | urgent.
         external_ref: ID da issue no Linear (se já existir).    
@@ -60,7 +63,7 @@ async def create_ticket_escalation(
         return {
             "status": "failed",
             "error": (
-                f"intent inválido: {intent!r}; use 'approval_gate' ou 'handoff'."
+                f"intent inválido: {intent!r}; use 'refund_confirmation' ou 'handoff'."
             ),
         }
 

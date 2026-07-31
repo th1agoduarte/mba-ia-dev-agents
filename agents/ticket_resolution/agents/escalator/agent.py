@@ -55,6 +55,8 @@ a) Crie a issue no Linear.
         Defina a priority do issue conforme o `severity` do pedido: low, medium, high, urgent.
 
 b) Chame `create_ticket_escalation` e use o `external_ref` como ID da issue no Linear.
+    O `intent` é repassado EXATAMENTE como veio no pedido (`refund_confirmation` ou
+    `handoff`) — não traduza nem invente outro valor.
         
 # Passo 3 — responder
 

@@ -3,12 +3,13 @@ from google.adk.workflow import START
 
 from agents.ticket_resolution.nodes import (
     auto_refund_node,
-    await_refund_input_node, 
+    await_refund_input_node,
+    finish_escalation_node,
     finish_ticket_node,
-    refund_with_confirmation, 
+    refund_with_confirmation,
     refuse_ticket_node,
-    triage_escalation_node, 
-    triage_refund_node, 
+    triage_escalation_node,
+    triage_refund_node,
     triage_ticket_node
 )
 from agents.ticket_resolution.agents.attendant.agent import attendant_agent
@@ -31,6 +32,7 @@ root_agent = Workflow(
         }),
         (escalator_agent, triage_escalation_node, {
             "refund_await_input": await_refund_input_node,
+            "handoff": finish_escalation_node,
         }),
         (await_refund_input_node, refund_with_confirmation),
     ]

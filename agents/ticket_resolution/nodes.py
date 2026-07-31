@@ -4,7 +4,10 @@ from pydantic import BaseModel, Field
 from agents.ticket_resolution.agents.attendant.agent import AttendantOutput
 from google.adk.events import EventActions, RequestInput
 from agents.ticket_resolution.agents.escalator.agent import EscalatorInput, EscalatorIntent, EscalatorOutput
-from agents.ticket_resolution.agents.refund_investigator.agent import RefundInvestigatorOutput
+from agents.ticket_resolution.agents.refund_investigator.agent import (
+    RefundInvestigatorOutput,
+    VerdictDecision,
+)
 from db import repo
 from db.models import TicketCategory, TicketStatus
 from outside import mock_billing_server as _billing
@@ -143,42 +146,73 @@ class AutoRefundRequest(BaseModel):
         default="", description="SKUs das linhas a estornar.")
 
 
+def _escalate_event(
+    *,
+    intent: EscalatorIntent,
+    summary: str,
+    severity: str,
+    state_delta: dict | None = None,
+) -> Event:
+    """Roteia para o `escalator_agent` com o pedido de escalação já formatado."""
+    return Event(
+        actions=EventActions(route="escalate", state_delta=state_delta or {}),
+        output=EscalatorInput(intent=intent, summary=summary, severity=severity),
+    )
+
+
 @node
 async def triage_refund_node(
     ctx: Context,
     node_input: RefundInvestigatorOutput,
 ):
+    """Portão do refund: SOMA o valor real e decide auto / aprovação / handoff.
 
-    if node_input.decision != "refund":
-        pass
-        # prosseguir com o escalate
-
+    O investigador aponta as LINHAS; quem soma é o código. Só o caminho `auto`
+    dispensa humano — qualquer incerteza (veredito de escalate, dado que não
+    fecha, valor acima do teto absoluto) vira handoff.
+    """
     month = node_input.month or ""
     item_ids = node_input.item_ids or []
     customer_id = ctx.state.get("customer_id")
+
+    if node_input.decision != VerdictDecision.refund:
+        return _escalate_event(
+            intent=EscalatorIntent.handoff,
+            summary=(
+                "O investigador não encontrou base para estorno automático: "
+                f"{node_input.reasoning}"
+            ),
+            severity=_escalation_severity(),
+        )
+
     calc = await _compute_refundable(customer_id, month, item_ids)
 
+    # `not_found`/`invalid` não têm valor somado, e `block_refund` está acima do
+    # teto absoluto: nenhum deles pode virar portão de aprovação (aprovar seria
+    # furar a política) — os três vão para um humano assumir.
     if calc["status"] in ("not_found", "invalid", "block_refund"):
-        pass
-        # prosseguir com o escalate
+        return _escalate_event(
+            intent=EscalatorIntent.handoff,
+            summary=(
+                f"Refund não pôde ser processado automaticamente: {calc['reason']}"
+            ),
+            severity=_escalation_severity(
+                calc_status=calc["status"], amount=calc.get("amount")
+            ),
+        )
 
     if calc["amount"] > REFUND_APPROVAL_THRESHOLD:
-        return Event(
-            actions=EventActions(
-                route="escalate",
-                state_delta={
-                    "refund_amount": calc["amount"],
-                    "refund_month": month,
-                    "refund_skus": calc["skus"],
-                }
+        return _escalate_event(
+            intent=EscalatorIntent.refund_confirmation,
+            summary=(
+                f"Pedido de refund de S${calc['amount']:.2f} referente à fatura de {month} (linhas: {calc['skus']})."
             ),
-            output=EscalatorInput(
-                intent=EscalatorIntent.refund_confirmation,
-                summary=(
-                    f"Pedido de refund de S${calc['amount']:.2f} referente à fatura de {month} (linhas: {calc['skus']})."
-                ),
-                severity=_escalation_severity(amount=calc["amount"])
-            )
+            severity=_escalation_severity(amount=calc["amount"]),
+            state_delta={
+                "refund_amount": calc["amount"],
+                "refund_month": month,
+                "refund_skus": calc["skus"],
+            },
         )
 
     auto_refund_request = AutoRefundRequest(
@@ -220,13 +254,68 @@ async def auto_refund_node(ctx: Context, node_input: AutoRefundRequest):
 
 @node
 async def triage_escalation_node(node_input: EscalatorOutput):
-    if node_input.status != "failed":
-        if node_input.intent == EscalatorIntent.refund_confirmation:
-            return Event(actions=EventActions(route="refund_await_input"))
+    """Depois da escalação: abre o portão de aprovação ou encerra em handoff.
+
+    Só um `refund_confirmation` BEM-SUCEDIDO pode pausar — sem escalação criada
+    não existe onde o humano decidir. Todo o resto (handoff, ou falha ao
+    escalar) cai no nó terminal, que fecha o ticket com o status certo.
+    """
+    if (
+        node_input.status != "failed"
+        and node_input.intent == EscalatorIntent.refund_confirmation
+    ):
+        return Event(actions=EventActions(route="refund_await_input"))
+
+    return Event(actions=EventActions(route="handoff"), output=node_input)
 
 
 @node
-async def await_refund_input_node():
+async def finish_escalation_node(ticket_id: str, node_input: EscalatorOutput):
+    """Terminal do handoff: o ticket sai do automático e vai para um humano."""
+    ticket = await repo.get_ticket(ticket_id)
+
+    if not ticket:
+        # type: ignore
+        return Event(message=f"Ticket {ticket_id} não encontrado.")
+
+    if node_input.status == "failed":
+        ticket.status = TicketStatus.FAILED
+        ticket.error = node_input.detail
+        message = (
+            "Olá! Tivemos um problema técnico ao encaminhar seu caso e não foi "
+            "possível concluí-lo automaticamente. A falha já está registrada e "
+            "nossa equipe vai retomar o atendimento."
+        )
+    else:
+        ticket.status = TicketStatus.ESCALATED
+        message = (
+            "Olá! Seu caso precisa de uma análise mais detalhada e foi encaminhado "
+            "a um especialista da nossa equipe, que dará continuidade ao "
+            "atendimento e retornará com uma posição."
+        )
+
+    ticket.response = message
+    await repo.update_ticket(ticket)
+    return Event(message=message)  # type: ignore
+
+
+@node
+async def await_refund_input_node(ticket_id: str):
+    """PAUSA o grafo até um humano aprovar ou recusar o estorno.
+
+    O `AWAITING_APPROVAL` é gravado aqui, junto da pausa: quem conhece o
+    desfecho é o nó, não quem dispara o grafo. É um set idempotente — se o
+    corpo do nó reexecutar num resume, o valor é o mesmo.
+    """
+    ticket = await repo.get_ticket(ticket_id)
+
+    if not ticket:
+        # type: ignore
+        return Event(message=f"Ticket {ticket_id} não encontrado.")
+
+    ticket.status = TicketStatus.AWAITING_APPROVAL
+    await repo.update_ticket(ticket)
+
     return RequestInput(
         message=(
             "Aprovação humana necessária para o estorno. "

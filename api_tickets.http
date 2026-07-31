@@ -1,0 +1,64 @@
+# Fluxo completo de tickets — `uv run uvicorn web:app --port 8000`
+# (o account_operator precisa do MCP de conta: `uv run python -m outside.account_mcp_server`)
+#
+# Os ids passam de uma requisição para a outra por VARIÁVEIS DE RESPOSTA
+# (`{{nomeDoRequest.response.body.$.campo}}`), então é só clicar em "Send Request"
+# na ordem 1 → 2 → 3 → 4: nada de copiar e colar session_id/ticket_id.
+
+@baseUrl = http://localhost:8000
+
+# Troque o cliente para mudar o caminho que o grafo percorre:
+#   C-201  fatura legítima          → atendimento geral
+#   C-203  duplicado de $30         → refund automático
+#   C-204  duplicado de $480        → acima do teto, handoff humano
+#   C-205  sem fatura               → handoff humano
+#   C-206  ajuste manual de $40     → refund automático
+#   C-207  ajuste manual de $120    → PAUSA pedindo aprovação humana
+@customerId = C-207
+
+@mensagem = Ha um ajuste manual de 120 dolares sem justificativa na fatura de 2026-06. Solicito estorno.
+
+
+### 1. abre a sessão de conversa (o customer_id vira o user_id da sessão)
+# @name sessao
+POST {{baseUrl}}/sessao
+Content-Type: application/json
+
+{
+  "customer_id": "{{customerId}}"
+}
+
+
+### 2. conversa com o recepcionista — quando ele registra, volta o ticket_id
+@sessionId = {{sessao.response.body.$.session_id}}
+
+# @name abertura
+POST {{baseUrl}}/mensagem
+Content-Type: application/json
+
+{
+  "session_id": "{{sessionId}}",
+  "customer_id": "{{customerId}}",
+  "mensagem": "{{mensagem}}"
+}
+
+
+### 3. roda o workflow de resolução do ticket
+# Para mexer num ticket JÁ aberto, troque a linha abaixo por um id fixo
+# (ex.: `@ticketId = TCK-0FD6B5BB`) e pule as requisições 1 e 2.
+@ticketId = {{abertura.response.body.$.ticket_id}}
+
+POST {{baseUrl}}/tickets/{{ticketId}}/resolucao
+
+
+### 4. responde a aprovação humana e RETOMA o workflow de onde parou
+POST {{baseUrl}}/tickets/{{ticketId}}/aprovacao
+Content-Type: application/json
+
+{
+  "confirmed": true
+}
+
+
+### consulta o ticket no banco (sem chamar agente)
+GET {{baseUrl}}/tickets/{{ticketId}}
