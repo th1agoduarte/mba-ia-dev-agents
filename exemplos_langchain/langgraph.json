@@ -1,0 +1,22 @@
+{
+  "dependencies": [
+    "langchain",
+    "langchain-google-genai",
+    "langchain-mcp-adapters"
+  ],
+  "graphs": {
+    "01_agente_minimo": "./ex_01_agente_minimo/agente.py:agente",
+    "02_modelo_instrucao": "./ex_02_modelo_instrucao/agente.py:agente",
+    "03_tools_hitl": "./ex_03_tools_hitl/agente.py:agente",
+    "04_handoffs": "./ex_04_handoffs/agente.py:agente",
+    "05_subagente_tool": "./ex_05_subagente_tool/agente.py:agente",
+    "06_subagente_oneshot": "./ex_06_subagente_oneshot/agente.py:agente",
+    "07_subagente_clarificacao": "./ex_07_subagente_clarificacao/agente.py:agente",
+    "08_sessao": "./ex_08_sessao/agente.py:agente",
+    "09_estado": "./ex_09_estado/agente.py:agente",
+    "10_recepcao_middleware": "./ex_10_recepcao_middleware/agente.py:agente",
+    "11_mcp_linear": "./ex_11_mcp/agente.py:criar_agente",
+    "langgraph_ticket_resolution": "../exemplos_langgraph/grafo/grafo.py:grafo"
+  },
+  "env": "../.env"
+}

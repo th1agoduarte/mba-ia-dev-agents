@@ -5,3 +5,14 @@
 *.pyc
 
 agents/tickets.db
+exemplos-langchain/**/.dados/
+
+# clones de documentação/fonte upstream (consulta local, não versionar)
+docs/adk-docs/
+docs/adk-python/
+docs/langchain-docs/
+docs/langchain/
+docs/langgraph/
+
+.dados/
+.langgraph_api
