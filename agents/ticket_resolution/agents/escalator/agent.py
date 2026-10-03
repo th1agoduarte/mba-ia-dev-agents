@@ -1,5 +1,9 @@
 from enum import Enum
 from google.adk import Agent
+try:
+    from agents.model_config import modelo
+except ModuleNotFoundError:  # adk web: 'agents/' está no sys.path, não a raiz
+    from model_config import modelo
 from pydantic import BaseModel, Field
 from agents.ticket_resolution.tools.ticket_escalation_tools import (
     create_ticket_escalation,
@@ -81,7 +85,7 @@ escalator_agent = Agent(
         "handoff = caso para um humano assumir) "
         "e persiste a escalação"
     ),
-    model="gemini-3.5-flash",
+    model=modelo(__file__),
     instruction=_INSTRUCTION,
     tools=_tools,
     input_schema=EscalatorInput,

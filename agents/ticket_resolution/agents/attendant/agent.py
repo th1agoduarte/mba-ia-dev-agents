@@ -1,6 +1,10 @@
 from typing import Literal
 
 from google.adk import Agent
+try:
+    from agents.model_config import modelo
+except ModuleNotFoundError:  # adk web: 'agents/' está no sys.path, não a raiz
+    from model_config import modelo
 from google.adk.tools import AgentTool
 from pydantic import BaseModel, Field
 from agents.ticket_resolution.agents.account_operator.agent import account_operator_agent
@@ -56,7 +60,7 @@ attendant_agent = Agent(
         "Atendente de atendimento geral: resolve dúvidas/problemas,"
         "verifica de status da plataforma e realiza operações de conta"
     ),
-    model="gemini-3.5-flash",
+    model=modelo(__file__),
     instruction=_INSTRUCTION,
     tools=[platform_status, AgentTool(account_operator_agent)], #http
     #sub_agents=[account_operator_agent],

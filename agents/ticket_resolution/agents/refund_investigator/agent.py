@@ -1,5 +1,9 @@
 from enum import Enum
 from google.adk import Agent
+try:
+    from agents.model_config import modelo
+except ModuleNotFoundError:  # adk web: 'agents/' está no sys.path, não a raiz
+    from model_config import modelo
 from pydantic import BaseModel, Field
 from agents.ticket_resolution.tools.billing_tools import find_invoices
 
@@ -65,7 +69,7 @@ refund_investigator_agent = Agent(
         "Especialista em julgar a política de refund: busca as faturas e aponta as LINHAS indevidas"
         "Devolve um veredito refund/escalate."
     ),
-    model="gemini-3.5-flash",
+    model=modelo(__file__),
     instruction=_INSTRUCTION,
     tools=[find_invoices],
     output_schema=RefundInvestigatorOutput,

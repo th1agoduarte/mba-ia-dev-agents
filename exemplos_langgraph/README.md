@@ -31,6 +31,11 @@ A partir da **raiz do repositório** — os imports são absolutos
 Precisa de `GOOGLE_API_KEY` no `.env` da raiz — três dos quatro cenários chamam
 o Gemini.
 
+> **Gemini ou Anthropic.** `acme/config.py` respeita o `MODEL_PROVIDER` do `.env`
+> da raiz (`gemini` padrão | `anthropic`). Em modo `anthropic`, os modelos viram
+> `anthropic:claude-...` e é preciso `uv add langchain-anthropic` +
+> `ANTHROPIC_API_KEY`.
+
 ```bash
 uv run python exemplos_langgraph/main.py           # 4 cenários; o último aprova
 uv run python exemplos_langgraph/main.py recusar   # o último recusa

@@ -1,4 +1,8 @@
 from google.adk import Agent
+try:
+    from agents.model_config import modelo
+except ModuleNotFoundError:  # adk web: 'agents/' está no sys.path, não a raiz
+    from model_config import modelo
 from pydantic import BaseModel, Field
 from mcp_clients.account_mcp import create_account_toolset
 
@@ -39,7 +43,7 @@ account_operator_agent = Agent(
         "Especialista em ações de conta (adicionar membro à equipe, etc)."
     ),
     #mode="single_turn",
-    model="gemini-3.5-flash",
+    model=modelo(__file__),
     instruction=_INSTRUCTION,
     tools=[create_account_toolset()], #mcp
     output_schema=AccountOperatorOutput,

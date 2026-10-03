@@ -1,4 +1,8 @@
 from google.adk import Agent
+try:
+    from agents.model_config import modelo
+except ModuleNotFoundError:  # adk web: 'agents/' está no sys.path, não a raiz
+    from model_config import modelo
 from pydantic import BaseModel, Field
 from db.models import TicketCategory
 
@@ -74,7 +78,7 @@ class TicketClassifierOutput(BaseModel):
 ticket_classifier_subagent = Agent(
     name="ticket_classifier",
     description="Classifica tickets de suporte da Acme Cloud em categorias pré-definidas.",
-    model="gemini-3.5-flash",
+    model=modelo(__file__),
     mode="single_turn",
     instruction=_INSTRUCTION,
     output_schema=TicketClassifierOutput,

@@ -54,6 +54,13 @@ Duas armadilhas:
   raiz do repo explicitamente.
 - O provedor Gemini aceita `GOOGLE_API_KEY` ou `GEMINI_API_KEY`.
 
+> **Gemini ou Anthropic.** `acme/config.py` respeita o mesmo `MODEL_PROVIDER` do
+> `.env` da raiz usado pelos agentes ADK: `gemini` (padrão) ou `anthropic`. Em
+> modo `anthropic`, `MODELO_RAPIDO`/`MODELO_PADRAO` viram `anthropic:claude-...`
+> e é preciso `uv add langchain-anthropic` + `ANTHROPIC_API_KEY`. As variáveis
+> de modelo por agente (`<NOME>_MODEL`) são só dos agentes ADK; aqui o modelo
+> vem do `config.py`.
+
 O modelo é declarado de duas formas:
 
 ```python

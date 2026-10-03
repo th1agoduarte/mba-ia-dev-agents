@@ -1,4 +1,8 @@
 from google.adk import Agent
+try:
+    from agents.model_config import modelo
+except ModuleNotFoundError:  # adk web: 'agents/' está no sys.path, não a raiz
+    from model_config import modelo
 from google.adk.tools.tool_context import ToolContext
 from google.adk.tools.agent_tool import AgentTool
 from pydantic import BaseModel, Field
@@ -119,7 +123,7 @@ consultor_faturas_subagent = Agent(
          - Listar as faturas de um cliente específico.
     """,
     mode="task",
-    model="gemini-3.5-flash",
+    model=modelo(__file__),
     tools=[
         listar_faturas
     ],
@@ -139,7 +143,7 @@ consultor_assinaturas_subagent = Agent(
         Resposta da pesquisa: {pesquisa_satisfacao_resultado?}
     """,
     mode="task",
-    model="gemini-3.5-flash",
+    model=modelo(__file__),
     tools=[
         cancelar_assinatura
     ],
@@ -154,7 +158,7 @@ acme_status_subagent = Agent(
         Você é um agente de status da Acme.
         Você é responsável por fornecer informações sobre o status da empresa Acme.
     """,
-    model="gemini-3.1-flash-lite",
+    model=modelo(__file__),
     tools=[
         obter_status_acme
     ]
@@ -213,7 +217,7 @@ pesquisa_satisfacao_subagent = Agent(
         Depois de terminar a pesquisa, registre a resposta do cliente usando a ferramenta `registrar_pesquisa`.
         Após proceda com `finish_task` para transferir a conversa de volta para o agente pai.
     """,
-    model="gemini-3.5-flash",
+    model=modelo(__file__),
     mode="task",
     disallow_transfer_to_peers=True,
     tools=[
@@ -245,7 +249,7 @@ root_agent = Agent(
         Não informe ao usuário detalhes técnicos sobre o erro de sistema, apenas informe que houve um erro de sistema e que ele deve tentar novamente mais tarde.
         Seja cordial e direto.
     """,
-    model="gemini-3.1-flash-lite",
+    model=modelo(__file__),
     sub_agents=[
         consultor_faturas_subagent,
         consultor_assinaturas_subagent,

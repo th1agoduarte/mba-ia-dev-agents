@@ -2,6 +2,10 @@ from multiprocessing import Value
 from typing import Any, Optional
 
 from google.adk.agents import Agent
+try:
+    from agents.model_config import modelo
+except ModuleNotFoundError:  # adk web: 'agents/' está no sys.path, não a raiz
+    from model_config import modelo
 from google.adk.apps import App
 from agents.ticket_receptionist.plugins import ModelRetryPlugin
 from db.models import TicketModel, ClassificationModel
@@ -190,7 +194,7 @@ def _handle_tool_error(
 root_agent = Agent(
     name="ticket_receptionist",
     description="Responsável por receber tickets de suporte da Acme Cloud e classificá-los.",
-    model="gemini-3.5-flash-lite",
+    model=modelo(__file__),
     instruction=_INSTRUCTION_RECEPTIONIST,
     sub_agents=[
         ticket_classifier_subagent

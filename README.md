@@ -44,10 +44,42 @@ cp .env.example .env
 # preencha GOOGLE_API_KEY
 ```
 
-O `.env.example` documenta cada variável. Duas observações:
+O `.env.example` documenta cada variável. Três observações:
 
-- `GOOGLE_API_KEY` é a única realmente obrigatória para começar.
+- `GOOGLE_API_KEY` é a única realmente obrigatória para começar (com o provider padrão).
 - `ACCOUNT_MCP_HOST` e `ACCOUNT_MCP_PORT` **não têm valor default no código** — sem elas o `ticket_resolution` falha já no import. Já vêm preenchidas no `.env.example`.
+- `MODEL_PROVIDER` escolhe o modelo de **todos** os agentes — veja abaixo.
+
+### Gemini ou Anthropic (Claude)
+
+Todos os agentes passam pelo seletor central [`agents/model_config.py`](agents/model_config.py), que troca de provider pela variável `MODEL_PROVIDER` no `.env` — sem mexer em código:
+
+```bash
+MODEL_PROVIDER=gemini      # padrão — usa GOOGLE_API_KEY
+MODEL_PROVIDER=anthropic   # usa ANTHROPIC_API_KEY (via litellm)
+```
+
+Com `anthropic`, cada modelo Gemini é mapeado para um equivalente Claude (`flash` → Sonnet, `flash-lite` → Haiku); ajuste os IDs em `agents/model_config.py` se necessário. Os exemplos em `exemplos_langchain/` respeitam o mesmo switch, mas em modo `anthropic` exigem `uv add langchain-anthropic`.
+
+### Modelo por agente (variáveis no `.env` da raiz)
+
+Tudo fica no **`.env` da raiz**. Cada agente tem a **sua própria variável** de modelo, mais uma variável com o **valor padrão**:
+
+```bash
+# valor padrão (SEM CUSTO), usado por quem não tiver variável preenchida
+DEFAULT_MODEL=gemini-3.5-flash-lite
+
+# variável de cada agente (vazio = usa DEFAULT_MODEL)
+MEU_AGENTE1_MODEL=
+OPERADOR_CONTA_MODEL=gemini-3.5-flash     # override só deste agente
+```
+
+Regras:
+
+- O nome da variável é o **nome da pasta do agente em MAIÚSCULAS + `_MODEL`** (ex.: `agents/operador_conta/` → `OPERADOR_CONTA_MODEL`). Cada agente chama `modelo(__file__)` e a chave é derivada automaticamente.
+- **Vazia ou ausente** → o agente usa `DEFAULT_MODEL` (sem custo). Sem nem o `DEFAULT_MODEL`, o código cai em `gemini-3.5-flash-lite`.
+- O valor é um nome de modelo **Gemini**; com `MODEL_PROVIDER=anthropic`, ele é mapeado para o Claude equivalente automaticamente.
+- Todas essas variáveis já vêm listadas (vazias) no [`.env.example`](.env.example). A lógica está em [`agents/model_config.py`](agents/model_config.py).
 
 ## 🚀 Como rodar
 
@@ -56,13 +88,19 @@ O `.env.example` documenta cada variável. Duas observações:
 É a forma principal de trabalhar durante as aulas. O `adk web` varre a pasta e lista **todos** os agentes num dropdown, com o grafo de eventos ao lado da conversa:
 
 ```bash
-uv run adk web agents
+PYTHONPATH=. uv run adk web agents
 ```
+
+> **Por que `PYTHONPATH=.`?** A partir do ADK 2.11 o loader do `adk web` coloca
+> só a pasta `agents/` no `sys.path` — não a raiz do repo. Os agentes
+> multi-arquivo (`ticket_resolution`, `ticket_receptionist`) importam seus
+> sub-agentes com `from agents....`, então sem a raiz no path eles falham com
+> `No module named 'agents'`. `PYTHONPATH=.` (rodando da raiz) resolve.
 
 Para conversar no terminal, com um agente específico:
 
 ```bash
-uv run adk run agents/operador_conta
+PYTHONPATH=. uv run adk run agents/operador_conta
 ```
 
 > O detalhe de como o ADK descobre e carrega esses agentes está em [`docs/01`](./docs/01-adk-run-carregamento-de-agentes.md).

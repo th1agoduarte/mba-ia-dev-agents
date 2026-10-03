@@ -10,13 +10,28 @@ from dotenv import load_dotenv
 RAIZ = Path(__file__).resolve().parent.parent.parent
 load_dotenv(RAIZ / ".env")
 
-if not os.getenv("GOOGLE_API_KEY"):
-    raise RuntimeError(
-        f"GOOGLE_API_KEY não encontrada. Defina no .env da raiz ({RAIZ / '.env'})."
-    )
+# Mesmo switch dos agentes ADK (agents/model_config.py): gemini | anthropic.
+PROVIDER = os.getenv("MODEL_PROVIDER", "gemini").strip().lower()
 
-MODELO_RAPIDO = "google_genai:gemini-3.1-flash-lite"
-MODELO_PADRAO = "google_genai:gemini-3.5-flash"
+if PROVIDER == "gemini":
+    if not os.getenv("GOOGLE_API_KEY"):
+        raise RuntimeError(
+            f"GOOGLE_API_KEY não encontrada. Defina no .env da raiz ({RAIZ / '.env'})."
+        )
+    MODELO_RAPIDO = "google_genai:gemini-3.1-flash-lite"
+    MODELO_PADRAO = "google_genai:gemini-3.5-flash"
+elif PROVIDER == "anthropic":
+    if not os.getenv("ANTHROPIC_API_KEY"):
+        raise RuntimeError(
+            f"ANTHROPIC_API_KEY não encontrada. Defina no .env da raiz ({RAIZ / '.env'})."
+        )
+    # Requer o pacote langchain-anthropic:  uv add langchain-anthropic
+    MODELO_RAPIDO = "anthropic:claude-haiku-4-5"
+    MODELO_PADRAO = "anthropic:claude-sonnet-5"
+else:
+    raise RuntimeError(
+        f"MODEL_PROVIDER inválido: {PROVIDER!r}. Use 'gemini' ou 'anthropic'."
+    )
 
 # Mesmos limiares do projeto ADK (env.py). Acima do limiar exige aprovação
 # humana; acima do teto o refund é bloqueado e vira handoff.

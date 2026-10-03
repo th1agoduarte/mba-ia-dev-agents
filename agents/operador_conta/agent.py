@@ -1,4 +1,8 @@
 from google.adk import Agent
+try:
+    from agents.model_config import modelo
+except ModuleNotFoundError:  # adk web: 'agents/' está no sys.path, não a raiz
+    from model_config import modelo
 from google.adk.tools.function_tool import FunctionTool
 from google.adk.tools.tool_context import ToolContext
 
@@ -86,7 +90,7 @@ root_agent = Agent(
         O usuário precisa fornecer o ID do cliente para que você possa buscar as informações corretas.
         Seja cordial e direto.
     """,
-    model="gemini-3.1-flash-lite",
+    model=modelo(__file__),
     tools=[
         listar_faturas, 
         #FunctionTool(cancelar_assinatura, require_confirmation=verificar_valor_assinatura)

@@ -1,4 +1,8 @@
 from google.adk import Agent
+try:
+    from agents.model_config import modelo
+except ModuleNotFoundError:  # adk web: 'agents/' está no sys.path, não a raiz
+    from model_config import modelo
 from google.adk.tools.tool_context import ToolContext
 
 FATURAS = [
@@ -81,7 +85,7 @@ consultor_faturas_subagent = Agent(
          - Listar as faturas de um cliente específico.
          Seja cordial e direto.
     """,
-    model="gemini-3.5-flash",
+    model=modelo(__file__),
     tools=[
         listar_faturas
     ],
@@ -100,7 +104,7 @@ consultor_assinaturas_subagent = Agent(
          - Informar ao cliente sobre sua assinatura: o plano, status e renovação.
         Seja cordial e direto.
     """,
-    model="gemini-3.5-flash",
+    model=modelo(__file__),
     tools=[
         cancelar_assinatura
     ],
@@ -115,7 +119,7 @@ root_agent = Agent(
         Você é o atendente de conta interativo da Acme.
         Seja cordial e direto.
     """,
-    model="gemini-3.1-flash-lite",
+    model=modelo(__file__),
     sub_agents=[
         consultor_faturas_subagent,
         consultor_assinaturas_subagent
