@@ -1,3 +1,4 @@
+import os
 from enum import Enum
 from google.adk import Agent
 try:
@@ -72,8 +73,9 @@ Responda um JSON válido com:
 
 
 _tools = [get_ticket_escalation, create_ticket_escalation]
-_linear = create_linear_toolset()
-_tools.append(_linear)
+# Linear é opcional: sem LINEAR_API_KEY o escalonamento fica só no card local
+if os.environ.get("LINEAR_API_KEY"):
+    _tools.append(create_linear_toolset())
 
 
 escalator_agent = Agent(
