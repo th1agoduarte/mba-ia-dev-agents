@@ -83,4 +83,8 @@ ticket_classifier_subagent = Agent(
     instruction=_INSTRUCTION,
     output_schema=TicketClassifierOutput,
     output_key=CLASSIFIER_OUTPUT_KEY,
+    # O ADK 2.11 ainda injeta `transfer_to_agent` em sub-agente single_turn: sem
+    # isso o classificador transfere de volta ao recepcionista e entra em recursão.
+    disallow_transfer_to_parent=True,
+    disallow_transfer_to_peers=True,
 )
